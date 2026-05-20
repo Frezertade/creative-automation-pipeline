@@ -533,26 +533,26 @@ details summary {
   height: 100%;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(4px);
+  align-items: center;
+  justify-content: center;
 }
 .modal-overlay.open {
-  display: block;
+  display: flex;
 }
 
 .modal-content {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
   background: #1a1a2e;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  max-width: 90vw;
-  max-height: 85vh;
-  width: min(90vw, 900px);
+  max-width: 92vw;
+  max-height: 88vh;
+  width: min(92vw, 900px);
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   overflow: hidden;
+  /* Position set by JavaScript */
+  position: fixed;
 }
 
 .modal-header {

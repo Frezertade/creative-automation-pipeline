@@ -258,7 +258,7 @@
   <!-- MODAL OVERLAY (JSON / Image viewer)                               -->
   <!-- ================================================================= -->
   <div id="modal-overlay" class="modal-overlay" onclick="closeModal(event)">
-    <div class="modal-content" onclick="event.stopPropagation()">
+    <div id="modal-content" class="modal-content">
       <div class="modal-header">
         <span id="modal-title" class="modal-title"></span>
         <button class="modal-close" onclick="closeModal()">&times;</button>
@@ -271,18 +271,33 @@
     // ---- Modal Controls ----
     function openModal(title) {
       document.getElementById('modal-title').textContent = title;
-      document.getElementById('modal-overlay').classList.add('open');
+      var overlay = document.getElementById('modal-overlay');
+      overlay.classList.add('open');
+
+      // Center the modal explicitly with JS
+      var content = document.getElementById('modal-content');
+      if (content) {
+        content.style.position = 'fixed';
+        content.style.left = '50%';
+        content.style.top = '50%';
+        content.style.transform = 'translate(-50%, -50%)';
+        content.style.zIndex = '1001';
+        content.style.margin = '0';
+        // Stop clicks on content from closing modal
+        content.onclick = function(e) { e.stopPropagation(); };
+      }
+
       document.body.style.overflow = 'hidden';
       // Force scroll to top after render
       var body = document.getElementById('modal-body');
       if (body) {
         body.scrollTop = 0;
-        setTimeout(function() { body.scrollTop = 0; }, 50);
+        setTimeout(function() { body.scrollTop = 0; }, 100);
       }
     }
 
     function closeModal(e) {
-      if (e && e.target !== e.currentTarget) return; // only close when clicking overlay or close btn
+      if (e && e.target !== e.currentTarget) return;
       document.getElementById('modal-overlay').classList.remove('open');
       document.body.style.overflow = '';
     }
