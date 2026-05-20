@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple
 
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
+from src import genai
 from src.config import (
     ASPECT_RATIOS,
     DEFAULT_BRAND_COLOR,
@@ -27,6 +28,12 @@ from src.config import (
     PLACEHOLDER_TEXT,
 )
 from src.models import Campaign, Product
+
+GENAI_CACHE_DIR = INPUT_DIR / ".genai"
+
+# Per-process set of product names whose GenAI call already failed this run.
+# Avoids hammering the API 3x (once per ratio) when the first call errors.
+_genai_failed: set[str] = set()
 
 logger = logging.getLogger(__name__)
 
@@ -205,9 +212,38 @@ def load_product_image(
             logger.warning("Failed to open fallback image %s: %s", f.name, e)
             continue
 
-    # 3. No image at all → GenAI placeholder
+    # 3. No image at all → try GenAI (cached per-product), then placeholder
+    if genai.is_enabled() and product.name not in _genai_failed:
+        cache_path = _genai_cache_path(product.name)
+        if not cache_path.is_file():
+            prompt = genai.build_prompt(
+                product.name,
+                product.message,
+                campaign.campaign_message,
+                campaign.target_region,
+            )
+            image_bytes = genai.generate_hero_image(prompt)
+            if image_bytes:
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+                cache_path.write_bytes(image_bytes)
+                logger.info("GenAI image cached: %s", cache_path)
+            else:
+                _genai_failed.add(product.name)
+        if cache_path.is_file():
+            try:
+                img = Image.open(cache_path).convert("RGB")
+                return resize_contain(img, width, height)
+            except Exception as e:
+                logger.warning("Failed to open cached GenAI image %s: %s", cache_path, e)
+
     logger.info("No image available for %s — using placeholder", product.name)
     return create_placeholder(width, height, brand_color)
+
+
+def _genai_cache_path(product_name: str) -> Path:
+    """Per-product cache path so one GenAI call serves all 3 ratios."""
+    slug = "".join(c if c.isalnum() else "_" for c in product_name.lower()).strip("_")
+    return GENAI_CACHE_DIR / f"{slug}.png"
 
 
 def resize_contain(img: Image.Image, target_w: int, target_h: int, bg_color: tuple = (30, 30, 30)) -> Image.Image:

@@ -17,6 +17,9 @@ data/inputs/*.jpg
 data/inputs/*.jpeg
 data/inputs/*.webp
 
+# GenAI cache (regenerated per run)
+data/inputs/.genai/
+
 # Keep sample campaign, ignore everything else in inputs
 !data/inputs/.gitkeep
 

@@ -127,7 +127,18 @@ Supply a JSON file with this structure:
 
 1. For each product × aspect ratio, the pipeline looks for the image file in `data/inputs/`.
 2. **Image found** → loaded, resized with letterbox padding (`object-fit: contain` equivalent). The full image is always visible, with neutral-dark bars filling any extra space.
-3. **Image missing** → a dark gradient placeholder with a sparkle icon is generated, labelled *"GenAI Image Generation Placeholder"* — indicating where a real GenAI model would produce the hero image.
+3. **Image missing** →
+   - If `OPENAI_API_KEY` is set, the pipeline calls OpenAI's `gpt-image-1` to generate a hero image from a prompt built out of the product name, message, campaign message, and target region. The result is cached at `data/inputs/.genai/{product_slug}.png` so the three aspect ratios for a given product share **one** API call.
+   - Otherwise, a dark-gradient placeholder labelled *"GenAI Image Generation Placeholder"* is rendered. The pipeline never fails — placeholder is the always-available fallback.
+
+### GenAI Setup (optional)
+
+```bash
+export OPENAI_API_KEY=sk-...
+python main.py --campaign data/sample_campaign.json
+```
+
+Roughly $0.04 per generated image with `gpt-image-1` at 1024×1024. Generation is cached per product (in `data/inputs/.genai/`), so re-runs with the same campaign cost $0. Delete that folder to force regeneration.
 
 ### Text Overlay
 
@@ -236,7 +247,7 @@ python main.py --campaign data/sample_campaign.json
 
 | Assumption / Limitation | Notes |
 |---|---|
-| **No actual GenAI calls** | Placeholders mark where GenAI images would be injected. A production system would integrate DALL·E, Stable Diffusion, or Midjourney. |
+| **GenAI is optional** | Real GenAI calls run when `OPENAI_API_KEY` is set (OpenAI `gpt-image-1`). Without it, a labelled placeholder is rendered so the pipeline always produces output. |
 | **English-only text overlay** | Localisation is structural (text lives in campaign JSON) but not translated. A production system could integrate an LLM translation step. |
 | **Simple brand compliance** | Colour detection is basic (dominant colours via palette reduction). True logo detection would need object detection (YOLO, etc.). |
 | **File-based storage** | Images save to local disk. Production systems would use S3/Azure Blob with CDN. |
