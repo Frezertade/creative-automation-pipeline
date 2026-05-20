@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""
-Creative Automation Pipeline — Entry Point.
+"""Creative Automation Pipeline — Entry Point.
 
 Usage:
-    # CLI mode: generate from a campaign JSON
+    # CLI mode — generate from a campaign JSON
     python main.py --campaign data/sample_campaign.json
 
-    # Web mode: launch the FastAPI UI
+    # Web mode — launch the FastAPI UI
     python main.py --web
-    # or
+
+    # Direct uvicorn (for production deployments)
     uvicorn main:app --host 0.0.0.0 --port 8000
 """
 from __future__ import annotations
