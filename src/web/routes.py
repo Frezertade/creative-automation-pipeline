@@ -178,11 +178,21 @@ def _build_context():
     }
 
 
+NO_CACHE_HEADERS = {
+    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+    "Pragma": "no-cache",
+    "Expires": "0",
+}
+
+
 def _render(request: Request, **extra):
     """Shortcut to render index.html with merged context."""
     ctx = _build_context()
     ctx.update(extra)
-    return templates.TemplateResponse(request, "index.html", context=ctx)
+    response = templates.TemplateResponse(request, "index.html", context=ctx)
+    for k, v in NO_CACHE_HEADERS.items():
+        response.headers[k] = v
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -328,13 +338,16 @@ async def trigger_generation(request: Request):
 @router.get("/report", response_class=HTMLResponse)
 async def view_report(request: Request):
     """View the latest QA validation report."""
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request, "report.html",
         context={
             "report": _validation_report,
             "campaign": _campaign_dict(),
         },
     )
+    for k, v in NO_CACHE_HEADERS.items():
+        response.headers[k] = v
+    return response
 
 
 @router.get("/outputs/{path:path}")
