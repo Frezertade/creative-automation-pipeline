@@ -45,7 +45,10 @@
 
       {% if campaign %}
       <div class="campaign-info">
-        <h3>{{ campaign.campaign_name }}</h3>
+        <div class="campaign-header">
+          <h3>{{ campaign.campaign_name }}</h3>
+          <button type="button" class="btn btn-small btn-ghost" onclick="showJsonModal()">📄 View JSON</button>
+        </div>
         <table class="info-table">
           <tr><td>Region</td><td>{{ campaign.target_region }}</td></tr>
           <tr><td>Audience</td><td>{{ campaign.target_audience }}</td></tr>
@@ -84,7 +87,7 @@
         <summary class="section-summary">Uploaded Images ({{ input_images|length }})</summary>
         <div class="input-gallery">
           {% for img in input_images %}
-          <div class="input-thumb">
+          <div class="input-thumb" onclick="showImageModal('{{ img.url }}', '{{ img.filename }}')">
             <div class="thumb-img-wrap">
               <img src="{{ img.url }}" alt="{{ img.filename }}" title="{{ img.filename }} ({{ img.size_kb }} KB)">
             </div>
@@ -201,8 +204,8 @@
           {% for ratio_name, paths in ratios.items() %}
           <div class="ratio-card">
             <h4>{{ ratio_name }}</h4>
-            <div class="image-preview">
-              <img src="/outputs/{{ paths[0] }}?v={{ generation_timestamp }}" alt="{{ product_name }} {{ ratio_name }}" loading="lazy">
+            <div class="image-preview" onclick="showImageModal('/outputs/{{ paths[0] }}?v={{ generation_timestamp }}', '{{ product_name }} {{ ratio_name }}')">
+              <img src="/outputs/{{ paths[0] }}?v={{ generation_timestamp }}" alt="{{ product_name }} {{ ratio_name }}" loading="lazy" style="cursor:pointer">
             </div>
             <a href="/outputs/{{ paths[0] }}?v={{ generation_timestamp }}" download class="btn btn-small">⬇️ Download</a>
           </div>
@@ -230,7 +233,7 @@
             <strong>{{ ratio_entry.name }}</strong>
             <div class="tree-images">
               {% for img in ratio_entry.images %}
-              <a href="/outputs/{{ img.rel }}?v={{ generation_timestamp }}" target="_blank" class="thumb-link">
+              <a href="/outputs/{{ img.rel }}?v={{ generation_timestamp }}" target="_blank" class="thumb-link" onclick="event.preventDefault(); showImageModal('/outputs/{{ img.rel }}?v={{ generation_timestamp }}', '{{ img.filename }}')">
                 <img src="/outputs/{{ img.rel }}?v={{ generation_timestamp }}" alt="{{ img.filename }}" loading="lazy">
               </a>
               {% endfor %}
@@ -250,5 +253,70 @@
       <p>Creative Automation Pipeline · Built with FastAPI + Pillow</p>
     </div>
   </footer>
+
+  <!-- ================================================================= -->
+  <!-- MODAL OVERLAY (JSON / Image viewer)                               -->
+  <!-- ================================================================= -->
+  <div id="modal-overlay" class="modal-overlay" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span id="modal-title" class="modal-title"></span>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script>
+    // ---- Modal Controls ----
+    function openModal(title) {
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-overlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(e) {
+      if (e && e.target !== e.currentTarget) return; // only close when clicking overlay or close btn
+      document.getElementById('modal-overlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeModal();
+    });
+
+    // ---- Show JSON Modal ----
+    function showJsonModal() {
+      fetch('/api/campaign')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var formatted = JSON.stringify(data, null, 2);
+          document.getElementById('modal-body').innerHTML =
+            '<pre class="json-viewer">' + escapeHtml(formatted) + '</pre>';
+          openModal('📋 Campaign JSON');
+        })
+        .catch(function(err) {
+          document.getElementById('modal-body').innerHTML =
+            '<p class="hint" style="color:#fca5a5">Failed to load campaign JSON: ' + err.message + '</p>';
+          openModal('⚠️ Error');
+        });
+    }
+
+    // ---- Show Image Modal ----
+    function showImageModal(url, label) {
+      document.getElementById('modal-body').innerHTML =
+        '<div class="modal-image-wrap"><img src="' + url + '" alt="' + escapeHtml(label) + '" class="modal-image"></div>' +
+        '<p class="modal-image-label">' + escapeHtml(label) + '</p>';
+      openModal('🖼️ ' + label);
+    }
+
+    // ---- Utility ----
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+  </script>
 </body>
 </html>
