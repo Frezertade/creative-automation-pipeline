@@ -551,8 +551,12 @@ details summary {
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   overflow: hidden;
-  /* Position set by JavaScript */
+  /* Centered via fixed positioning + transform */
   position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
 }
 
 .modal-header {

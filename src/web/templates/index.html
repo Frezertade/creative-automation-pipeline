@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Creative Automation Pipeline</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/style.v4.css">
 </head>
 <body>
   <header>
@@ -257,11 +257,11 @@
   <!-- ================================================================= -->
   <!-- MODAL OVERLAY (JSON / Image viewer)                               -->
   <!-- ================================================================= -->
-  <div id="modal-overlay" class="modal-overlay" onclick="closeModal(event)">
+  <div id="modal-overlay" class="modal-overlay">
     <div id="modal-content" class="modal-content">
       <div class="modal-header">
         <span id="modal-title" class="modal-title"></span>
-        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <button id="modal-close-btn" class="modal-close">&times;</button>
       </div>
       <div id="modal-body" class="modal-body"></div>
     </div>
@@ -269,37 +269,37 @@
 
   <script>
     // ---- Modal Controls ----
+    var modalOverlay = document.getElementById('modal-overlay');
+    var modalContent = document.getElementById('modal-content');
+    var modalBody = document.getElementById('modal-body');
+    var modalCloseBtn = document.getElementById('modal-close-btn');
+
     function openModal(title) {
       document.getElementById('modal-title').textContent = title;
-      var overlay = document.getElementById('modal-overlay');
-      overlay.classList.add('open');
-
-      // Center the modal explicitly with JS
-      var content = document.getElementById('modal-content');
-      if (content) {
-        content.style.position = 'fixed';
-        content.style.left = '50%';
-        content.style.top = '50%';
-        content.style.transform = 'translate(-50%, -50%)';
-        content.style.zIndex = '1001';
-        content.style.margin = '0';
-        // Stop clicks on content from closing modal
-        content.onclick = function(e) { e.stopPropagation(); };
-      }
-
+      modalOverlay.classList.add('open');
       document.body.style.overflow = 'hidden';
-      // Force scroll to top after render
-      var body = document.getElementById('modal-body');
-      if (body) {
-        body.scrollTop = 0;
-        setTimeout(function() { body.scrollTop = 0; }, 100);
+      // Reset scroll position
+      if (modalBody) {
+        modalBody.scrollTop = 0;
+        setTimeout(function() { modalBody.scrollTop = 0; }, 50);
       }
     }
 
-    function closeModal(e) {
-      if (e && e.target !== e.currentTarget) return;
-      document.getElementById('modal-overlay').classList.remove('open');
+    function closeModal() {
+      modalOverlay.classList.remove('open');
       document.body.style.overflow = '';
+    }
+
+    // Close when clicking overlay background (not the content inside it)
+    if (modalOverlay) {
+      modalOverlay.addEventListener('click', function(e) {
+        if (e.target === modalOverlay) closeModal();
+      });
+    }
+
+    // Close from X button
+    if (modalCloseBtn) {
+      modalCloseBtn.addEventListener('click', closeModal);
     }
 
     // Close on Escape key
