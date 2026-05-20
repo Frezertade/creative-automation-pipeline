@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+
+# Generated outputs (don't commit campaign outputs)
+outputs/
+
+# Uploaded product images
+data/inputs/*.png
+data/inputs/*.jpg
+data/inputs/*.jpeg
+data/inputs/*.webp
+
+# Keep sample campaign, ignore everything else in inputs
+!data/inputs/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.env
+*.env
+
+# Logs
+*.log

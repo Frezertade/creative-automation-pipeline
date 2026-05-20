@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creative Automation Pipeline</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>🎨 Creative Automation Pipeline</h1>
+      <p class="subtitle">Generate scalable social ad creatives from a campaign brief</p>
+    </div>
+  </header>
+
+  <main class="container">
+    {% if message %}
+    <div class="alert alert-success">{{ message | safe }}</div>
+    {% endif %}
+
+    <div class="reset-bar">
+      <form action="/reset" method="post" onsubmit="return confirm('This will delete ALL outputs, uploaded images, and the current campaign. Proceed?')">
+        <button type="submit" class="btn btn-danger btn-small">🗑️ Reset Everything</button>
+      </form>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- STEP 1: Campaign Brief -->
+    <!-- ================================================================= -->
+    <section class="card">
+      <h2>📋 1. Campaign Brief</h2>
+      <div class="upload-actions">
+        <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
+          <label class="file-label">
+            <span>Upload Campaign JSON</span>
+            <input type="file" name="file" accept=".json" required>
+          </label>
+          <button type="submit" class="btn btn-primary">📤 Upload</button>
+        </form>
+        <form action="/load-sample" method="post" style="display:inline">
+          <button type="submit" class="btn btn-secondary">📄 Load Sample Campaign</button>
+        </form>
+      </div>
+
+      {% if campaign %}
+      <div class="campaign-info">
+        <h3>{{ campaign.campaign_name }}</h3>
+        <table class="info-table">
+          <tr><td>Region</td><td>{{ campaign.target_region }}</td></tr>
+          <tr><td>Audience</td><td>{{ campaign.target_audience }}</td></tr>
+          <tr><td>Message</td><td>{{ campaign.campaign_message }}</td></tr>
+          <tr><td>Products</td>
+            <td>
+              {% for p in campaign.products %}
+                <span class="product-tag">{{ p.name }}</span>
+              {% endfor %}
+            </td>
+          </tr>
+        </table>
+      </div>
+      {% else %}
+      <p class="hint">No campaign loaded. Upload a JSON file or load the sample.</p>
+      {% endif %}
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- STEP 2: Upload Images -->
+    <!-- ================================================================= -->
+    <section class="card">
+      <h2>🖼️ 2. Upload Product Images</h2>
+      <p class="hint">Upload your product photos here. Then assign each image to a product below.</p>
+
+      <form action="/upload-image" method="post" enctype="multipart/form-data" class="upload-form" style="margin-bottom:16px">
+        <label class="file-label">
+          <span>Choose Image (PNG/JPG)</span>
+          <input type="file" name="file" accept=".png,.jpg,.jpeg,.webp" required>
+        </label>
+        <button type="submit" class="btn btn-primary">📤 Upload Image</button>
+      </form>
+
+      {% if input_images %}
+      <details open>
+        <summary class="section-summary">Uploaded Images ({{ input_images|length }})</summary>
+        <div class="input-gallery">
+          {% for img in input_images %}
+          <div class="input-thumb">
+            <div class="thumb-img-wrap">
+              <img src="{{ img.url }}" alt="{{ img.filename }}" title="{{ img.filename }} ({{ img.size_kb }} KB)">
+            </div>
+            <span class="input-name">{{ img.filename }}</span>
+            <span class="input-size">{{ img.size_kb }} KB</span>
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% else %}
+      <p class="hint">No images uploaded yet.</p>
+      {% endif %}
+    </section>
+
+    <!-- ================================================================= -->
+    <!-- STEP 3: Assign Images to Products -->
+    <!-- ================================================================= -->
+    {% if campaign and input_images %}
+    <section class="card card-highlight">
+      <h2>🔗 3. Assign Images → Products</h2>
+      <p class="hint">Choose which uploaded image each product should use for generation.</p>
+
+      <div class="assign-grid">
+        {% for p in campaign.products %}
+        <div class="assign-card">
+          <div class="assign-header">
+            <span class="product-icon">📦</span>
+            <strong class="assign-product-name">{{ p.name }}</strong>
+          </div>
+
+          <form action="/assign-image" method="post" class="assign-form">
+            <input type="hidden" name="product_name" value="{{ p.name }}">
+            <div class="assign-row">
+              <select name="image_file" class="assign-select" onchange="this.form.submit()">
+                <option value="">— No image (use placeholder) —</option>
+                {% for img in input_images %}
+                <option value="{{ img.filename }}" {% if p.image == img.filename %}selected{% endif %}>
+                  {{ img.filename }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+          </form>
+
+          <div class="assign-preview">
+            {% set matched = input_images | selectattr('filename', 'equalto', p.image) | first %}
+            {% if matched %}
+            <img src="{{ matched.url }}" alt="{{ p.image }}" class="assign-thumb">
+            <span class="assign-status assigned">✅ {{ p.image }}</span>
+            {% elif p.image %}
+            <div class="assign-thumb placeholder-thumb">
+              <span>⚠️</span>
+            </div>
+            <span class="assign-status missing">File "{{ p.image }}" not uploaded</span>
+            {% else %}
+            <div class="assign-thumb placeholder-thumb">
+              <span>🖼️</span>
+            </div>
+            <span class="assign-status unset">No image → will use GenAI placeholder</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- ================================================================= -->
+    <!-- STEP 4: Generate -->
+    <!-- ================================================================= -->
+    {% if campaign %}
+    <section class="card">
+      <h2>⚙️ 4. Generate Creatives</h2>
+      <form action="/generate" method="post">
+        <button type="submit" class="btn btn-primary btn-large">🚀 Generate All Creatives</button>
+      </form>
+      <p class="hint">
+        Creates <strong>{{ campaign.products|length }} product(s)</strong> ×
+        <strong>{{ aspect_ratios|length }} ratios</strong> =
+        <strong>{{ campaign.products|length * aspect_ratios|length }} images</strong>
+      </p>
+      {% if campaign.products %}
+      <div style="margin-top:12px;font-size:0.85rem;color:#a1a1aa">
+        {% for p in campaign.products %}
+        <div style="margin:4px 0">
+          📦 {{ p.name }} →
+          {% if p.image %}
+            <span style="color:#86efac">🖼️ {{ p.image }}</span>
+          {% else %}
+            <span style="color:#fca5a5">⚠️ No image assigned (will use placeholder)</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
+    <!-- ================================================================= -->
+    <!-- RESULTS -->
+    <!-- ================================================================= -->
+    {% if generation_results %}
+    <section class="card">
+      <h2>✅ Generated Outputs</h2>
+      <div class="actions-bar">
+        <a href="/download/all" class="btn btn-success">⬇️ Download All as ZIP</a>
+        <a href="/report" class="btn btn-info">📊 View QA Report</a>
+      </div>
+
+      {% for product_name, ratios in generation_results.items() %}
+      <div class="product-group">
+        <h3>📦 {{ product_name }}</h3>
+        <div class="ratio-grid">
+          {% for ratio_name, paths in ratios.items() %}
+          <div class="ratio-card">
+            <h4>{{ ratio_name }}</h4>
+            <div class="image-preview">
+              <img src="/outputs/{{ paths[0] }}?v={{ generation_timestamp }}" alt="{{ product_name }} {{ ratio_name }}" loading="lazy">
+            </div>
+            <a href="/outputs/{{ paths[0] }}?v={{ generation_timestamp }}" download class="btn btn-small">⬇️ Download</a>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+
+    <!-- ================================================================= -->
+    <!-- Output Browser -->
+    <!-- ================================================================= -->
+    {% if output_tree %}
+    <section class="card">
+      <h2>📂 Output Browser</h2>
+      {% for campaign_entry in output_tree %}
+      <div class="tree-campaign">
+        <h3>{{ campaign_entry.name }}</h3>
+        {% for product_entry in campaign_entry.products %}
+        <details open>
+          <summary>{{ product_entry.name }}</summary>
+          {% for ratio_entry in product_entry.ratios %}
+          <div class="tree-ratio">
+            <strong>{{ ratio_entry.name }}</strong>
+            <div class="tree-images">
+              {% for img in ratio_entry.images %}
+              <a href="/outputs/{{ img.rel }}?v={{ generation_timestamp }}" target="_blank" class="thumb-link">
+                <img src="/outputs/{{ img.rel }}?v={{ generation_timestamp }}" alt="{{ img.filename }}" loading="lazy">
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </details>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>Creative Automation Pipeline · Built with FastAPI + Pillow</p>
+    </div>
+  </footer>
+</body>
+</html>

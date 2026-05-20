@@ -1,0 +1,44 @@
+{
+  "campaign_name": "Summer Sale 2026",
+  "campaign_message": "Summer Sale — Up to 50% Off!",
+  "target_region": "North America",
+  "target_audience": "Adults 18–45, social media users",
+  "brand_color": "#FF6B35",
+  "secondary_color": "#004E89",
+  "logo_path": null,
+  "products": [
+    {
+      "name": "Wireless Headphones",
+      "image": "sample_product.png",
+      "message": "Premium Sound, Zero Wires",
+      "cta": "Shop Now",
+      "features": [
+        "40h battery life",
+        "Active noise cancellation",
+        "Bluetooth 5.3"
+      ]
+    },
+    {
+      "name": "Smart Water Bottle",
+      "image": null,
+      "message": "Stay Hydrated, Stay Smart",
+      "cta": "Learn More",
+      "features": [
+        "Temperature display",
+        "Drink reminder",
+        "500ml capacity"
+      ]
+    },
+    {
+      "name": "Portable Charger",
+      "image": null,
+      "message": "Power on the Go",
+      "cta": "Get Yours",
+      "features": [
+        "20000mAh capacity",
+        "Fast charging",
+        "Dual USB-C ports"
+      ]
+    }
+  ]
+}

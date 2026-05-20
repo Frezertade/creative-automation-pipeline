@@ -1,0 +1,13 @@
+services:
+  creative-pipeline:
+    build: .
+    container_name: creative-pipeline
+    ports:
+      - "127.0.0.1:8050:8000"
+    volumes:
+      - ./outputs:/app/outputs
+      - ./data/inputs:/app/data/inputs
+      - ./data/sample_campaign.json:/app/data/sample_campaign.json
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1

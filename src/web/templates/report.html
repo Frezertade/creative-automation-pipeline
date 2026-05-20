@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA Report — Creative Automation Pipeline</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>📊 QA Validation Report</h1>
+      <p class="subtitle">Campaign: {{ report.campaign_name if report else '—' }}</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <a href="/" class="btn btn-secondary">← Back to Dashboard</a>
+
+    {% if not report %}
+    <div class="card">
+      <p class="hint">No validation report available. Run generation first.</p>
+    </div>
+    {% else %}
+
+    <!-- Summary -->
+    <section class="card">
+      <h2>📈 Summary</h2>
+      <div class="summary-badge {{ 'badge-pass' if report.summary.status == 'PASS' else 'badge-issues' }}">
+        {{ report.summary.status }}
+      </div>
+      <table class="info-table">
+        <tr><td>Total Images</td><td>{{ report.total_images }} / {{ report.summary.expected_images }} expected</td></tr>
+        <tr><td>Dimension Pass</td><td>{{ report.summary.dimension_pass }} / {{ report.summary.dimension_pass + report.summary.dimension_fail }}</td></tr>
+        <tr><td>Brand Checks Pass</td><td>{{ report.summary.brand_pass }} / {{ report.summary.brand_pass + report.summary.brand_fail }}</td></tr>
+        <tr><td>Text Checks Pass</td><td>{{ report.summary.text_pass }} / {{ report.summary.text_pass + report.summary.text_fail }}</td></tr>
+        <tr><td>Quality Checks Pass</td><td>{{ report.summary.quality_pass }} / {{ report.summary.quality_pass + report.summary.quality_fail }}</td></tr>
+        <tr><td>Legal Flags</td><td>{{ report.summary.legal_flags }}</td></tr>
+      </table>
+    </section>
+
+    {% if report.errors %}
+    <section class="card card-error">
+      <h2>❌ Errors</h2>
+      <ul>
+        {% for err in report.errors %}
+        <li>{{ err }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    <!-- Dimension Checks -->
+    <section class="card">
+      <h2>📐 Dimension Checks</h2>
+      {% if report.dimension_checks %}
+      <table class="check-table">
+        <thead>
+          <tr><th>Image</th><th>Ratio</th><th>Result</th><th>Details</th></tr>
+        </thead>
+        <tbody>
+          {% for check in report.dimension_checks %}
+          <tr class="{{ 'row-pass' if check.pass else 'row-fail' }}">
+            <td>{{ check.path.split('/')[-1] }}</td>
+            <td>{{ check.ratio }}</td>
+            <td>{{ '✅' if check.pass else '❌' }}</td>
+            <td>{{ check.details.actual }} {{ check.details.error if check.details.error else '' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <p class="hint">No dimension data</p>
+      {% endif %}
+    </section>
+
+    <!-- Brand Checks -->
+    <section class="card">
+      <h2>🏷️ Brand Compliance</h2>
+      {% if report.brand_checks %}
+      {% for check in report.brand_checks %}
+      <div class="check-item {{ 'pass' if check.pass else 'fail' }}">
+        <strong>{{ '✅' if check.pass else '❌' }}</strong>
+        <span class="check-path">{{ check.path.split('/')[-1] }}</span>
+        <ul>
+          {% for c in check.checks %}
+          <li>{{ c.check }}: {{ '✅' if c.pass else '⚠️' }} — {{ c.detail }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="hint">No brand check data</p>
+      {% endif %}
+    </section>
+
+    <!-- Text Visibility -->
+    <section class="card">
+      <h2>👁️ Text Visibility</h2>
+      {% if report.text_checks %}
+      {% for check in report.text_checks %}
+      <div class="check-item {{ 'pass' if check.pass else 'fail' }}">
+        <strong>{{ '✅' if check.pass else '❌' }}</strong>
+        <span class="check-path">{{ check.path.split('/')[-1] }}</span>
+        <ul>
+          {% for c in check.checks %}
+          <li>{{ c.check }}: {{ '✅' if c.pass else '⚠️' }} — {{ c.detail }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="hint">No text visibility data</p>
+      {% endif %}
+    </section>
+
+    <!-- Quality Checks (OpenCV) -->
+    <section class="card">
+      <h2>🔍 Image Quality (OpenCV)</h2>
+      {% if report.quality_checks %}
+      {% for check in report.quality_checks %}
+      <div class="check-item {{ 'pass' if check.pass else 'fail' }}">
+        <strong>{{ '✅' if check.pass else '❌' }}</strong>
+        <span class="check-path">{{ check.path.split('/')[-1] }}</span>
+        <ul>
+          {% for c in check.checks %}
+          <li>{{ c.check }}: {{ '✅' if c.pass else '⚠️' }} — {{ c.detail }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="hint">No quality check data</p>
+      {% endif %}
+    </section>
+
+    <!-- Legal Flags -->
+    <section class="card">
+      <h2>⚖️ Legal Content Check</h2>
+      {% if report.legal_flags %}
+      {% for flag in report.legal_flags %}
+      <div class="check-item {{ 'pass' if flag.pass else 'fail' }}">
+        <strong>{{ '✅' if flag.pass else '⚠️' }}</strong>
+        <span>{{ flag.product }}</span>
+        {% if flag.flagged_words %}
+        <ul>
+          {% for fw in flag.flagged_words %}
+          <li>Flagged: "<strong>{{ fw.word }}</strong>" in {{ fw.found_in | join(', ') }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <span class="hint"> — No prohibited words found</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="hint">No legal check data</p>
+      {% endif %}
+    </section>
+
+    {% endif %}
+  </main>
+
+  <footer>
+    <div class="container">
+      <p>Creative Automation Pipeline · QA Validation Report</p>
+    </div>
+  </footer>
+</body>
+</html>
