@@ -273,9 +273,12 @@
       document.getElementById('modal-title').textContent = title;
       document.getElementById('modal-overlay').classList.add('open');
       document.body.style.overflow = 'hidden';
-      // Reset scroll to top
+      // Force scroll to top after render
       var body = document.getElementById('modal-body');
-      if (body) body.scrollTop = 0;
+      if (body) {
+        body.scrollTop = 0;
+        setTimeout(function() { body.scrollTop = 0; }, 50);
+      }
     }
 
     function closeModal(e) {
