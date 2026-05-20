@@ -347,6 +347,21 @@ async def get_campaign():
     return _campaign.model_dump()
 
 
+@router.get("/download/campaign")
+async def download_campaign_json():
+    """Download the loaded campaign as a JSON file."""
+    if _campaign is None:
+        raise HTTPException(404, "No campaign loaded")
+    from fastapi.responses import JSONResponse
+    data = _campaign.model_dump()
+    return JSONResponse(
+        content=data,
+        headers={
+            "Content-Disposition": f'attachment; filename="{_campaign.campaign_name.replace(" ", "_")}_brief.json"',
+        },
+    )
+
+
 @router.get("/api/outputs")
 async def list_outputs():
     """Return the output tree as JSON."""

@@ -307,13 +307,20 @@
       if (e.key === 'Escape') closeModal();
     });
 
-    // ---- Show JSON Modal ----
+    // ---- Show JSON Modal (with Copy + Download toolbar) ----
+    var _lastJsonData = null;
+
     function showJsonModal() {
       fetch('/api/campaign')
         .then(function(r) { return r.json(); })
         .then(function(data) {
+          _lastJsonData = data;
           var formatted = JSON.stringify(data, null, 2);
           document.getElementById('modal-body').innerHTML =
+            '<div class="json-toolbar">' +
+              '<button class="btn btn-small btn-ghost" onclick="copyJson()">📋 Copy</button>' +
+              '<a href="/download/campaign" class="btn btn-small btn-ghost" download>⬇️ Download .json</a>' +
+            '</div>' +
             '<pre class="json-viewer">' + escapeHtml(formatted) + '</pre>';
           openModal('📋 Campaign JSON');
         })
@@ -322,6 +329,44 @@
             '<p class="hint" style="color:#fca5a5">Failed to load campaign JSON: ' + err.message + '</p>';
           openModal('⚠️ Error');
         });
+    }
+
+    function copyJson() {
+      if (!_lastJsonData) return;
+      var text = JSON.stringify(_lastJsonData, null, 2);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          var btn = document.querySelector('.json-toolbar .btn');
+          if (btn) {
+            var orig = btn.textContent;
+            btn.textContent = '✅ Copied!';
+            setTimeout(function() { btn.textContent = orig; }, 2000);
+          }
+        }).catch(function() {
+          fallbackCopyJson(text);
+        });
+      } else {
+        fallbackCopyJson(text);
+      }
+    }
+
+    function fallbackCopyJson(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        var btn = document.querySelector('.json-toolbar .btn');
+        if (btn) {
+          var orig = btn.textContent;
+          btn.textContent = '✅ Copied!';
+          setTimeout(function() { btn.textContent = orig; }, 2000);
+        }
+      } catch(e) {}
+      document.body.removeChild(ta);
     }
 
     // ---- Show Image Modal ----

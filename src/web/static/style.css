@@ -604,6 +604,19 @@ details summary {
   white-space: pre;
   overflow-x: auto;
   tab-size: 2;
+  margin-top: 0;
+}
+
+/* --- JSON toolbar (Copy + Download buttons) ------------------------- */
+.json-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.json-toolbar .btn {
+  font-size: 0.78rem;
+  padding: 5px 14px;
 }
 
 /* --- Image in modal -------------------------------------------------- */
