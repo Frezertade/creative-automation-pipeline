@@ -273,6 +273,9 @@
       document.getElementById('modal-title').textContent = title;
       document.getElementById('modal-overlay').classList.add('open');
       document.body.style.overflow = 'hidden';
+      // Reset scroll to top
+      var body = document.getElementById('modal-body');
+      if (body) body.scrollTop = 0;
     }
 
     function closeModal(e) {
