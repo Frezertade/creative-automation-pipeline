@@ -60,6 +60,44 @@ _campaign: Campaign | None = None
 _generation_results: Dict | None = None
 _validation_report: Dict | None = None
 
+# Persisted alongside outputs so state survives restarts and is shared between
+# any process bind-mounting this directory (e.g. local python vs docker).
+STATE_FILE = OUTPUT_DIR / ".state.json"
+
+
+def _save_state() -> None:
+    payload = {
+        "campaign": _campaign.model_dump() if _campaign else None,
+        "generation_results": _generation_results,
+        "validation_report": _validation_report,
+    }
+    try:
+        OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        STATE_FILE.write_text(json.dumps(payload, default=str))
+    except Exception as e:
+        logger.warning("Failed to save state: %s", e)
+
+
+def _load_state() -> None:
+    global _campaign, _generation_results, _validation_report
+    if not STATE_FILE.is_file():
+        return
+    try:
+        payload = json.loads(STATE_FILE.read_text())
+    except Exception as e:
+        logger.warning("Failed to read state file: %s", e)
+        return
+    try:
+        if payload.get("campaign"):
+            _campaign = Campaign(**payload["campaign"])
+        _generation_results = payload.get("generation_results")
+        _validation_report = payload.get("validation_report")
+    except Exception as e:
+        logger.warning("Failed to hydrate state: %s", e)
+
+
+_load_state()
+
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -169,6 +207,7 @@ async def upload_campaign(request: Request, file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(400, f"Invalid campaign JSON: {e}")
 
+    _save_state()
     return _render(request, message=f"Campaign '{_campaign.campaign_name}' loaded successfully!")
 
 
@@ -200,6 +239,7 @@ async def assign_image_to_product(request: Request, product_name: str = Form(...
         if p.name == product_name:
             p.image = image_file
             logger.info("Assigned image '%s' to product '%s'", image_file, p.name)
+            _save_state()
             return _render(request, message=f"✅ Assigned '{image_file}' to **{p.name}**")
 
     raise HTTPException(404, f"Product '{product_name}' not found in campaign")
@@ -226,6 +266,8 @@ async def reset_all(request: Request):
             for child in INPUT_DIR.iterdir():
                 if child.is_file():
                     child.unlink()
+        if STATE_FILE.is_file():
+            STATE_FILE.unlink()
     except Exception as e:
         logger.warning("Reset cleanup warning: %s", e)
 
@@ -249,6 +291,7 @@ async def load_sample(request: Request):
     except Exception as e:
         raise HTTPException(500, f"Failed to load sample campaign: {e}")
 
+    _save_state()
     return _render(request, message=f"Sample campaign '{_campaign.campaign_name}' loaded!")
 
 
@@ -278,6 +321,7 @@ async def trigger_generation(request: Request):
         logger.exception("Generation failed")
         raise HTTPException(500, f"Generation failed: {e}")
 
+    _save_state()
     return _render(request, message="✨ Generation complete! See results below.")
 
 
