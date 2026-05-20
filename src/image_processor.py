@@ -156,13 +156,12 @@ def load_product_image(
     product: Product, campaign: Campaign, width: int, height: int
 ) -> Image.Image:
     """
-    Load a product image from ``data/inputs/`` or create a placeholder.
+    Load a product image from ``data/inputs/``, generate one via GenAI, or
+    fall back to a placeholder — in that order.
 
-    Falls back to the first available uploaded image if the product has
-    no specific image set, so uploading *any* image "just works".
-
-    When generating for multiple products in the same campaign, already-used
-    fallback images are tracked to distribute distinct images across products.
+    Per the brief: when an asset is missing for a product, the pipeline must
+    generate a *new* one (GenAI) — it MUST NOT silently borrow an image that
+    was assigned to a different product.
 
     Args:
         product: The product being processed.
@@ -184,35 +183,11 @@ def load_product_image(
                 img = Image.open(candidate).convert("RGB")
                 return resize_contain(img, width, height)
             except Exception as e:
-                logger.warning("Failed to open image %s: %s — checking fallbacks", candidate, e)
+                logger.warning("Failed to open image %s: %s — falling through to GenAI", candidate, e)
         else:
-            logger.warning("Image not found: %s — checking fallbacks", candidate)
+            logger.warning("Image not found: %s — falling through to GenAI", candidate)
 
-    # 2. Fallback: find an uploaded image not already used by another product
-    #    This distributes distinct images across products without explicit assignment.
-    uploaded = sorted(INPUT_DIR.glob("*"))
-    # Collect images already assigned to OTHER products in the same campaign
-    assigned_to_others: set[str] = set()
-    for p in campaign.products:
-        if p.image and p.name != product.name:
-            assigned_to_others.add(p.image)
-    # Try unassigned images first, then any image
-    candidates = [f for f in uploaded if f.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")]
-    # Sort: images NOT assigned to other products first, then the rest
-    candidates.sort(key=lambda f: f.name in assigned_to_others)
-
-    for f in candidates:
-        if image_name and f.name == image_name:
-            continue  # already tried above
-        logger.info("Fallback: using uploaded image %s for %s", f.name, product.name)
-        try:
-            img = Image.open(f).convert("RGB")
-            return resize_contain(img, width, height)
-        except Exception as e:
-            logger.warning("Failed to open fallback image %s: %s", f.name, e)
-            continue
-
-    # 3. No image at all → try GenAI (cached per-product), then placeholder
+    # 2. No image assigned (or assigned file is missing) → try GenAI (cached per-product), then placeholder
     if genai.is_enabled() and product.name not in _genai_failed:
         cache_path = _genai_cache_path(product.name)
         if not cache_path.is_file():
